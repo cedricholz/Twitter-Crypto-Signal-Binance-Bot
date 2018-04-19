@@ -4,6 +4,9 @@ import math
 import utils
 
 
+max_buy_percent_from_first_order = 3
+
+
 def get_binance_account():
     with open("binance_secrets.json") as secrets_file:
         secrets = json.load(secrets_file)
@@ -35,15 +38,22 @@ def get_binance_amount_to_buy_and_order_rate(binance, market, total_bitcoin):
 
     sell_orders = binance.get_order_book(symbol=market)['asks']
 
+    initial_price = float(sell_orders[0][0])
+
     for order in sell_orders:
         order_rate = float(order[0])
-        order_quantity = float(order[1])
 
-        amount_to_buy = total_bitcoin / order_rate
+        if utils.percent_change(initial_price, order_rate) < max_buy_percent_from_first_order:
 
-        constrained_amount_to_buy = math.floor((1 / stepSize) * amount_to_buy) * stepSize
-        if amount_to_buy < order_quantity and minQty < constrained_amount_to_buy < maxQty:
-            return constrained_amount_to_buy, order_rate
+            order_quantity = float(order[1])
+
+            amount_to_buy = total_bitcoin / order_rate
+
+            constrained_amount_to_buy = math.floor((1 / stepSize) * amount_to_buy) * stepSize
+            if amount_to_buy < order_quantity and minQty < constrained_amount_to_buy < maxQty:
+                return constrained_amount_to_buy, order_rate
+        else:
+            return 0
     return 0
 
 
@@ -106,7 +116,7 @@ def buy_from_binance(binance, market):
     amount, order_price = get_binance_amount_to_buy_and_order_rate(binance, market, total_bitcoin)
 
     if amount == 0:
-        utils.print_and_write_to_logfile("INSUFFICIENT FUNDS")
+        utils.print_and_write_to_logfile("INSUFFICIENT FUNDS OR BUY ORDER TOO HIGH")
         return False, order_price, amount
 
     order = binance.order_market_buy(

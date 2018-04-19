@@ -33,6 +33,8 @@ desired_gain_percent = 5;
 
 one_minute_in_milliseconds = 60000
 
+amount, order_price = binance_utils.get_binance_amount_to_buy_and_order_rate(binance, "XLMBTC", .1)
+
 
 def sell_after_pecentage_gain(bought_price, market, amount):
     sold = False
