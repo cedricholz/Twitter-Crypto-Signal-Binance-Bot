@@ -27,3 +27,8 @@ Create a file in the main folder called twitter_secrets.json and fill it with yo
 
 Go to http://gettwitterid.com and get the twitter Id's of the people you want to follow.
 Put them in twitter_user_ids_to_follow in Main.py.
+
+Add any coins you want to be ignored inside of ignored_coins.txt
+
+Add the specific words you want to look for in words_to_look_for.txt
+
