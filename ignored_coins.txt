@@ -1,0 +1,1 @@
+["burst", "dgb", "digibyte", "reddcoin", "RDD", "humaniq", "hmq", "tron", "trx"]
