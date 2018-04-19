@@ -1,4 +1,4 @@
-# Twitter-Signal-Cryptocurrency-Buyer
+# Twitter-Crypto-Signal-Binance-Bot
 
 
 Go to your Binance account, click account, Api settings and get your API key and secret.
