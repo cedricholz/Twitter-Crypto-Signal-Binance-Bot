@@ -61,7 +61,7 @@ class MyStreamListener(tweepy.StreamListener):
 
                 if coin_name:
 
-                    print_and_write_to_logfile(coin_name + " in tweet: " + status.text)
+                    utils.print_and_write_to_logfile(coin_name + " in tweet: " + status.text)
                     market = binance_coins[coin_name][0]
                     bought, bought_price, amount = binance_utils.buy_from_binance(binance, market)
 
