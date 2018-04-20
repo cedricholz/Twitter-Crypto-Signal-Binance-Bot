@@ -1,6 +1,11 @@
 # Twitter-Crypto-Signal-Binance-Bot
 
-First install binance by typing this into your console: pip3 install python-binance
+First install binance and Tweepy by typing these commands into your console: 
+```
+pip3 install python-binance
+pip3 install tweepy
+```
+
 
 Go to your Binance account, click account, Api settings and get your API key and secret.
 
