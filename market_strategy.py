@@ -29,7 +29,11 @@ words_to_look_for = utils.get_words_to_look_for()
 
 seconds_before_checking_binance_price = 30
 
-desired_gain_percent = 5;
+# .05 is 5%
+desired_gain_percent = .05
+
+# .03 is 3%
+market_max_buy_percent_from_first_order = .03
 
 one_minute_in_milliseconds = 60000
 
@@ -38,9 +42,9 @@ def sell_after_pecentage_gain(bought_price, market, amount):
     sold = False
 
     while not sold:
-        cur_price = binance_utils.get_cur_price(binance, market, amount)
+        cur_price = binance_utils.get_cur_price_from_large_enough_buy_order(binance, market, amount)
         if utils.percent_change(bought_price, cur_price) > desired_gain_percent:
-            sold = binance_utils.sell_on_binance(binance, market)
+            sold = binance_utils.market_sell_on_binance(binance, market)
         if not sold:
             time.sleep(seconds_before_checking_binance_price)
 
@@ -63,7 +67,8 @@ class MyStreamListener(tweepy.StreamListener):
 
                     utils.print_and_write_to_logfile(coin_name + " in tweet: " + status.text)
                     market = binance_coins[coin_name][0]
-                    bought, bought_price, amount = binance_utils.buy_from_binance(binance, market)
+                    bought, bought_price, amount = binance_utils.market_buy_from_binance(binance, market,
+                                                                                         market_max_buy_percent_from_first_order)
 
                     if bought:
                         sell_after_pecentage_gain(bought_price, market, amount)
