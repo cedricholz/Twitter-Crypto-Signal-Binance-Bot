@@ -88,6 +88,9 @@ def buy_and_wait_until_bought_or_cancel_order(market):
     return bought_price, amount_bought
 
 
+
+
+
 def sell_and_wait_until_sold_or_cancel(bought_price, market, amount_bought):
     status, order_id = binance_utils.limit_sell_on_binance(binance, market, amount_bought, bought_price,
                                                            limit_sell_order_desired_percentage_profit)
