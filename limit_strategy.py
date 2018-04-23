@@ -50,7 +50,7 @@ limit_buy_order_cap_percent = .03
 ###################
 
 # Desired percentage profit
-limit_sell_order_desired_percentage_profit = .01
+limit_sell_order_desired_percentage_profit = .05
 
 # Sell if the price drops this far below bought price
 limit_sell_order_percent_too_low = -.02
@@ -58,8 +58,22 @@ limit_sell_order_percent_too_low = -.02
 # Percent below current price to place sell order
 limit_sell_order_stop_loss_percent = -.01
 
+# Percent dropped below last price after we have reached our goal
+# making it time to sell
+limit_sell_percent_down_to_sell = -.01
 
-def buy_and_wait_until_bought_or_cancel_order(market):
+# Place a sell order this percent less than the current price
+limit_sell_percent_lower_than_cur_price = -.01
+
+"""
+
+Puts in a buy order at a price that is limit_buy_order_percent above the current price
+Then waits until the order has been filled.
+
+"""
+
+
+def handle_buying(market):
     status, bought_price, order_id, amount_bought = binance_utils.limit_buy_from_binance(binance, market,
                                                                                          limit_buy_order_percent)
 
@@ -88,13 +102,48 @@ def buy_and_wait_until_bought_or_cancel_order(market):
     return bought_price, amount_bought
 
 
+def wait_until_time_to_sell(bought_price, market):
+    percentage_change = 0
+    reached_goal = False
+    while True:
+        cur_price = binance_utils.get_most_recent_buy_order_price(binance, market)
+        percentage_change = utils.percent_change(bought_price, cur_price)
+
+        if percentage_change >= limit_sell_order_desired_percentage_profit:
+            reached_goal = True
+
+        if percentage_change < limit_sell_percent_down_to_sell and reached_goal == True:
+            break
+
+        time.sleep(seconds_before_checking_binance)
 
 
+"""
 
-def sell_and_wait_until_sold_or_cancel(bought_price, market, amount_bought):
+Waits until the price has gone up
+
+limit_sell_order_desired_percentage_profit
+
+percent and then dropped
+
+limit_sell_percent_down_to_sell
+
+percent. Then puts in a sell order for
+
+limit_sell_percent_lower_than_cur_price
+
+less than the current price.
+
+
+"""
+
+
+def handle_selling(bought_price, market, amount_bought):
+
+    wait_until_time_to_sell(bought_price, market)
+
     status, order_id = binance_utils.limit_sell_on_binance(binance, market, amount_bought, bought_price,
-                                                           limit_sell_order_desired_percentage_profit)
-
+                                                           limit_sell_percent_lower_than_cur_price)
     amount_sold = 0
     while status != 'FILLED':
         cur_price = binance_utils.get_most_recent_buy_order_price(binance, market)
@@ -140,10 +189,10 @@ class MyStreamListener(tweepy.StreamListener):
                     utils.print_and_write_to_logfile(coin_name + " in tweet: " + status.text)
                     market = binance_coins[coin_name][0]
 
-                    bought_price, amount_bought = buy_and_wait_until_bought_or_cancel_order(market)
+                    bought_price, amount_bought = handle_buying(market)
 
                     if amount_bought > 0:
-                        sell_and_wait_until_sold_or_cancel(bought_price, market, amount_bought)
+                        handle_selling(bought_price, market, amount_bought)
 
 
 # Begin Listening for new Tweets
