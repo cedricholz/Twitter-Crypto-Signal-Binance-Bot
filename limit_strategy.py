@@ -2,6 +2,8 @@ import utils
 import time
 import tweepy
 import binance_utils
+from binance.websockets import BinanceSocketManager
+from twisted.internet import reactor
 
 """
 
@@ -102,20 +104,30 @@ def handle_buying(market):
     return bought_price, amount_bought
 
 
-def wait_until_time_to_sell(bought_price, market):
-    percentage_change = 0
-    reached_goal = False
-    while True:
-        cur_price = binance_utils.get_most_recent_buy_order_price(binance, market)
-        percentage_change = utils.percent_change(bought_price, cur_price)
+
+def wait_until_time_to_sell(market):
+
+    def process_message(msg):
+        global max_price
+        global reached_goal
+        global percentage_change
+
+        cur_price = float(msg['p'])
+
+        percentage_change = utils.percent_change(max_price, cur_price)
 
         if percentage_change >= limit_sell_order_desired_percentage_profit:
             reached_goal = True
 
         if percentage_change < limit_sell_percent_down_to_sell and reached_goal == True:
-            break
+            bm.close()
 
-        time.sleep(seconds_before_checking_binance)
+        max_price = max(cur_price, max_price)
+
+    bm = BinanceSocketManager(binance)
+    conn_key = bm.start_trade_socket(market, process_message)
+    bm.run()
+
 
 
 """
@@ -134,13 +146,24 @@ limit_sell_percent_lower_than_cur_price
 
 less than the current price.
 
-
 """
 
+# These variables need to be global so they
+# work in the wait to sell stream
+percentage_change = 0
+reached_goal = False
+max_price = 0
 
 def handle_selling(bought_price, market, amount_bought):
+    global max_price
+    global reached_goal
+    global percentage_change
 
-    wait_until_time_to_sell(bought_price, market)
+    percentage_change = 0
+    reached_goal = False
+    max_price = bought_price
+
+    wait_until_time_to_sell(market)
 
     status, order_id = binance_utils.limit_sell_on_binance(binance, market, amount_bought, bought_price,
                                                            limit_sell_percent_lower_than_cur_price)

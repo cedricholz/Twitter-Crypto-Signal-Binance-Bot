@@ -188,7 +188,6 @@ def get_limit_binance_amount_to_buy_and_price(binance, market, total_bitcoin, li
 
     desired_buy_price = float(most_recent_order_price * (1 + limit_buy_order_percent))
 
-
     desired_buy_price_formatted = f'{desired_buy_price:.6f}'
 
     amount_to_buy = total_bitcoin / float(desired_buy_price_formatted)
