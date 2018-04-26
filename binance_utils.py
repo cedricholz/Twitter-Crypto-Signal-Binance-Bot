@@ -186,7 +186,7 @@ def get_limit_binance_amount_to_buy_and_price(binance, market, total_bitcoin, li
 
     most_recent_order_price = float(sell_orders[0][0])
 
-    desired_buy_price = float(most_recent_order_price * (1 + limit_buy_order_percent/100))
+    desired_buy_price = float(most_recent_order_price * (1 + limit_buy_order_percent / 100))
 
     desired_buy_price_formatted = f'{desired_buy_price:.6f}'
 
@@ -204,12 +204,17 @@ def limit_buy_from_binance(binance, market, limit_buy_order_percent):
 
     amount, order_price = get_limit_binance_amount_to_buy_and_price(binance, market, total_bitcoin,
                                                                     limit_buy_order_percent)
-
+    utils.print_and_write_to_logfile("ATTEMPING TO BUY " + str(amount) + " OF " + market + "FOR" + str(amount))
     if amount > 0:
-        order = binance.order_limit_buy(
-            symbol=market,
-            quantity=amount,
-            price=order_price)
+        try:
+            order = binance.order_limit_buy(
+                symbol=market,
+                quantity=amount,
+                price=order_price)
+        except:
+            utils.print_and_write_to_logfile("ERROR MAKING BUY")
+            print(order)
+            return "", 0, "", 0
 
         utils.print_and_write_to_logfile("LIMIT BUYING ON BINANCE")
         utils.print_and_write_to_logfile("MARKET: " + market)
@@ -222,6 +227,7 @@ def limit_buy_from_binance(binance, market, limit_buy_order_percent):
         return status, float(order_price), order_id, amount
 
     return "", 0, "", 0
+
 
 ###########
 
@@ -299,7 +305,7 @@ Greater than the bought price.
 def limit_sell_on_binance(binance, market, amount_bought, baseline_price, limit_sell_order_desired_percentage_profit):
     symbol = market.split("BTC")[0]
 
-    sell_price = baseline_price * (1 + limit_sell_order_desired_percentage_profit/100)
+    sell_price = baseline_price * (1 + limit_sell_order_desired_percentage_profit / 100)
     formated_sell_price = f'{sell_price:.6f}'
 
     order = binance.order_limit_sell(

@@ -128,7 +128,6 @@ def wait_until_time_to_sell(market):
 
         percentage_change = utils.percent_change(max_price, cur_price)
 
-
         if percentage_change >= limit_sell_order_desired_percentage_profit:
             reached_goal = True
             utils.print_and_write_to_logfile("REACHED PRICE GOAL")

@@ -9,7 +9,6 @@ count = 1
 
 
 
-
 def do():
     def process_message(msg):
         global count
