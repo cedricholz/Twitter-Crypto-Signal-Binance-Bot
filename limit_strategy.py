@@ -131,13 +131,16 @@ def wait_until_time_to_sell(market):
         percent_from_max = utils.percent_change(max_price, cur_price)
         percent_from_bought = utils.percent_change(price_bought, cur_price)
 
-        if percent_from_bought >= limit_sell_order_desired_percentage_profit:
+        if reached_goal == False and percent_from_bought >= limit_sell_order_desired_percentage_profit:
             reached_goal = True
             utils.print_and_write_to_logfile("REACHED PRICE GOAL")
 
         if percent_from_max < limit_sell_percent_down_to_sell and reached_goal == True:
-            utils.print_and_write_to_logfile("PERCENT DOWN FROM PEAK: " + str(percentage_change) + " TIME TO SELL")
-            reactor.stop()
+            utils.print_and_write_to_logfile("PERCENT DOWN FROM PEAK: " + str(percent_from_max) + ". TIME TO SELL")
+            try:
+                reactor.stop()
+            except:
+                print("REACTOR ALREADY STOPPED")
 
         max_price = max(cur_price, max_price)
 
