@@ -35,7 +35,7 @@ def get_coin_name_in_text(status_text, ignored_coins, binance_coins):
 
         if symbol not in ignored_coins and (pound_symbol_coin in lower_status or dollar_symbol_coin in lower_status):
             return symbol
-    return ""
+    return None
 
 
 def query_url(url_addr):
