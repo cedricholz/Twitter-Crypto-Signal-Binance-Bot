@@ -82,7 +82,7 @@ def handle_buying(market):
     if amount_bought > 0:
         utils.print_and_write_to_logfile("WAITING FOR ORDER TO BE FILLED")
 
-        cancel_price = bought_price * (1 + limit_buy_order_cap_percent/100)
+        cancel_price = bought_price * (1 + limit_buy_order_cap_percent / 100)
 
         if status != 'FILLED':
             while True:
@@ -106,7 +106,6 @@ def handle_buying(market):
 
                 time.sleep(seconds_before_checking_binance)
 
-
     return bought_price, amount_bought
 
 
@@ -115,24 +114,28 @@ def handle_buying(market):
 percentage_change = 0
 reached_goal = False
 max_price = 0
+price_bought = 0
 
 
 def wait_until_time_to_sell(market):
     utils.print_and_write_to_logfile("WAITING UNTIL TIME TO SELL")
+
     def process_message(msg):
         global max_price
         global reached_goal
         global percentage_change
+        global price_bought
 
         cur_price = float(msg['p'])
 
-        percentage_change = utils.percent_change(max_price, cur_price)
+        percent_from_max = utils.percent_change(max_price, cur_price)
+        percent_from_bought = utils.percent_change(price_bought, cur_price)
 
-        if percentage_change >= limit_sell_order_desired_percentage_profit:
+        if percent_from_bought >= limit_sell_order_desired_percentage_profit:
             reached_goal = True
             utils.print_and_write_to_logfile("REACHED PRICE GOAL")
 
-        if percentage_change < limit_sell_percent_down_to_sell and reached_goal == True:
+        if percent_from_max < limit_sell_percent_down_to_sell and reached_goal == True:
             utils.print_and_write_to_logfile("PERCENT DOWN FROM PEAK: " + str(percentage_change) + " TIME TO SELL")
             reactor.stop()
 
@@ -166,10 +169,12 @@ def handle_selling(bought_price, market, amount_bought):
     global max_price
     global reached_goal
     global percentage_change
+    global price_bought
 
     percentage_change = 0
     reached_goal = False
     max_price = bought_price
+    price_bought = bought_price
 
     wait_until_time_to_sell(market)
 
