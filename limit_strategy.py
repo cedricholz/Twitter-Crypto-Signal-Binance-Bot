@@ -34,38 +34,38 @@ one_minute_in_milliseconds = 60000
 ##################
 
 # Buying Variables
-# .01 means 1%
+# 1 means 1%
 
 ##################
 
 # Percent above current sell price to place buy order
-limit_buy_order_percent = .01
+limit_buy_order_percent = 1
 
 # Cancel buy order if it hasn't sold and the price is this percent more.
-limit_buy_order_cap_percent = .03
+limit_buy_order_cap_percent = 3
 
 ###################
 
 # Selling Variables
-# .01 means 1%
+# 1 means 1%
 
 ###################
 
 # Desired percentage profit
-limit_sell_order_desired_percentage_profit = .05
+limit_sell_order_desired_percentage_profit = 5
 
 # Sell if the price drops this far below bought price
-limit_sell_order_percent_too_low = -.02
+limit_sell_order_percent_too_low = -2
 
 # Percent below current price to place sell order
-limit_sell_order_stop_loss_percent = -.01
+limit_sell_order_stop_loss_percent = -1
 
 # Percent dropped below last price after we have reached our goal
 # making it time to sell
-limit_sell_percent_down_to_sell = -.01
+limit_sell_percent_down_to_sell = -1
 
 # Place a sell order this percent less than the current price
-limit_sell_percent_lower_than_cur_price = -.01
+limit_sell_percent_lower_than_cur_price = -1
 
 """
 
@@ -79,34 +79,46 @@ def handle_buying(market):
     status, bought_price, order_id, amount_bought = binance_utils.limit_buy_from_binance(binance, market,
                                                                                          limit_buy_order_percent)
 
-    cancel_price = bought_price * (1 + limit_buy_order_cap_percent)
+    if amount_bought > 0:
+        utils.print_and_write_to_logfile("WAITING FOR ORDER TO BE FILLED")
 
-    if status != 'FILLED':
-        while True:
-            order = binance.get_order(
-                symbol=market,
-                orderId=order_id)
+        cancel_price = bought_price * (1 + limit_buy_order_cap_percent/100)
 
-            status = order['status']
+        if status != 'FILLED':
+            while True:
+                order = binance.get_order(
+                    symbol=market,
+                    orderId=order_id)
 
-            amount_bought = float(order['executedQty'])
+                status = order['status']
 
-            if status == "FILLED":
-                break
+                amount_bought = float(order['executedQty'])
 
-            cur_price = binance_utils.get_most_recent_sell_order_price(binance, market)
+                if status == "FILLED":
+                    utils.print_and_write_to_logfile("ORDER FILLED")
+                    break
 
-            if cur_price > cancel_price:
-                break
+                cur_price = binance_utils.get_most_recent_sell_order_price(binance, market)
 
-            time.sleep(seconds_before_checking_binance)
+                if cur_price > cancel_price:
+                    utils.print_and_write_to_logfile("ORDER CANCELED")
+                    break
+
+                time.sleep(seconds_before_checking_binance)
+
 
     return bought_price, amount_bought
 
 
+# These variables need to be global so they
+# work in the wait to sell stream
+percentage_change = 0
+reached_goal = False
+max_price = 0
+
 
 def wait_until_time_to_sell(market):
-
+    utils.print_and_write_to_logfile("WAITING UNTIL TIME TO SELL")
     def process_message(msg):
         global max_price
         global reached_goal
@@ -116,18 +128,20 @@ def wait_until_time_to_sell(market):
 
         percentage_change = utils.percent_change(max_price, cur_price)
 
+
         if percentage_change >= limit_sell_order_desired_percentage_profit:
             reached_goal = True
+            utils.print_and_write_to_logfile("REACHED PRICE GOAL")
 
         if percentage_change < limit_sell_percent_down_to_sell and reached_goal == True:
-            bm.close()
+            utils.print_and_write_to_logfile("PERCENT DOWN FROM PEAK: " + str(percentage_change) + " TIME TO SELL")
+            reactor.stop()
 
         max_price = max(cur_price, max_price)
 
     bm = BinanceSocketManager(binance)
     conn_key = bm.start_trade_socket(market, process_message)
     bm.run()
-
 
 
 """
@@ -148,11 +162,6 @@ less than the current price.
 
 """
 
-# These variables need to be global so they
-# work in the wait to sell stream
-percentage_change = 0
-reached_goal = False
-max_price = 0
 
 def handle_selling(bought_price, market, amount_bought):
     global max_price
@@ -168,6 +177,7 @@ def handle_selling(bought_price, market, amount_bought):
     status, order_id = binance_utils.limit_sell_on_binance(binance, market, amount_bought, bought_price,
                                                            limit_sell_percent_lower_than_cur_price)
     amount_sold = 0
+    utils.print_and_write_to_logfile("WAITING FOR SELL ORDER TO GO THROUGH")
     while status != 'FILLED':
         cur_price = binance_utils.get_most_recent_buy_order_price(binance, market)
 
@@ -191,6 +201,7 @@ def handle_selling(bought_price, market, amount_bought):
                                                                          cur_price,
                                                                          limit_sell_order_stop_loss_percent)
         time.sleep(seconds_before_checking_binance)
+    utils.print_and_write_to_logfile(market + " SOLD")
 
 
 class MyStreamListener(tweepy.StreamListener):

@@ -186,7 +186,7 @@ def get_limit_binance_amount_to_buy_and_price(binance, market, total_bitcoin, li
 
     most_recent_order_price = float(sell_orders[0][0])
 
-    desired_buy_price = float(most_recent_order_price * (1 + limit_buy_order_percent))
+    desired_buy_price = float(most_recent_order_price * (1 + limit_buy_order_percent/100))
 
     desired_buy_price_formatted = f'{desired_buy_price:.6f}'
 
@@ -205,21 +205,23 @@ def limit_buy_from_binance(binance, market, limit_buy_order_percent):
     amount, order_price = get_limit_binance_amount_to_buy_and_price(binance, market, total_bitcoin,
                                                                     limit_buy_order_percent)
 
-    order = binance.order_limit_buy(
-        symbol=market,
-        quantity=amount,
-        price=order_price)
+    if amount > 0:
+        order = binance.order_limit_buy(
+            symbol=market,
+            quantity=amount,
+            price=order_price)
 
-    utils.print_and_write_to_logfile("LIMIT BUYING ON BINANCE")
-    utils.print_and_write_to_logfile("MARKET: " + market)
-    utils.print_and_write_to_logfile("AMOUNT: " + str(amount))
-    utils.print_and_write_to_logfile("TOTAL: " + str(total_bitcoin))
+        utils.print_and_write_to_logfile("LIMIT BUYING ON BINANCE")
+        utils.print_and_write_to_logfile("MARKET: " + market)
+        utils.print_and_write_to_logfile("AMOUNT: " + str(amount))
+        utils.print_and_write_to_logfile("TOTAL: " + str(total_bitcoin))
 
-    order_id = order['orderId']
-    status = order['status']
+        order_id = order['orderId']
+        status = order['status']
 
-    return status, float(order_price), order_id, amount
+        return status, float(order_price), order_id, amount
 
+    return "", 0, "", 0
 
 ###########
 
@@ -297,7 +299,7 @@ Greater than the bought price.
 def limit_sell_on_binance(binance, market, amount_bought, baseline_price, limit_sell_order_desired_percentage_profit):
     symbol = market.split("BTC")[0]
 
-    sell_price = baseline_price * (1 + limit_sell_order_desired_percentage_profit)
+    sell_price = baseline_price * (1 + limit_sell_order_desired_percentage_profit/100)
     formated_sell_price = f'{sell_price:.6f}'
 
     order = binance.order_limit_sell(

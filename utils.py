@@ -75,4 +75,7 @@ def print_and_write_to_logfile(log_text):
 
 
 def percent_change(bought_price, cur_price):
+    if bought_price == 0:
+        return 0
+
     return 100 * (cur_price - bought_price) / bought_price
