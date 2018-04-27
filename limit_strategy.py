@@ -115,6 +115,7 @@ percentage_change = 0
 reached_goal = False
 max_price = 0
 price_bought = 0
+cur_price = 0
 
 
 def wait_until_time_to_sell(market):
@@ -125,6 +126,7 @@ def wait_until_time_to_sell(market):
         global reached_goal
         global percentage_change
         global price_bought
+        global cur_price
 
         cur_price = float(msg['p'])
 
@@ -173,6 +175,7 @@ def handle_selling(bought_price, market, amount_bought):
     global reached_goal
     global percentage_change
     global price_bought
+    global cur_price
 
     percentage_change = 0
     reached_goal = False
@@ -181,7 +184,7 @@ def handle_selling(bought_price, market, amount_bought):
 
     wait_until_time_to_sell(market)
 
-    status, order_id = binance_utils.limit_sell_on_binance(binance, market, amount_bought, bought_price,
+    status, order_id = binance_utils.limit_sell_on_binance(binance, market, amount_bought, cur_price,
                                                            limit_sell_percent_lower_than_cur_price)
     amount_sold = 0
     utils.print_and_write_to_logfile("WAITING FOR SELL ORDER TO GO THROUGH")
@@ -199,6 +202,8 @@ def handle_selling(bought_price, market, amount_bought):
 
         # Coin is going down too much, cancel order and sell lower
         if percent_change < limit_sell_order_percent_too_low:
+            utils.print_and_write_to_logfile("COIN HAS GONE DOWN BY " + str(percent_change) + ". SELLING AT A LOSS")
+
             binance.cancel_order(
                 symbol=market,
                 orderId=order_id)
