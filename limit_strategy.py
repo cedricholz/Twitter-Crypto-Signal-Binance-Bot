@@ -219,25 +219,28 @@ class MyStreamListener(tweepy.StreamListener):
 
     # Called when there is a new status
     def on_status(self, status):
-        tweet_time = int(status.timestamp_ms)
-        cur_time = int(round(time.time() * 1000))
+        try:
+            tweet_time = int(status.timestamp_ms)
+            cur_time = int(round(time.time() * 1000))
 
-        # Tweets will queue while we are waiting to sell
-        # and we don't want to buy on old data
-        if cur_time - tweet_time < one_minute_in_milliseconds:
+            # Tweets will queue while we are waiting to sell
+            # and we don't want to buy on old data
+            if cur_time - tweet_time < one_minute_in_milliseconds:
 
-            if utils.contains_words_to_look_for(status.text, words_to_look_for):
+                if utils.contains_words_to_look_for(status.text, words_to_look_for):
 
-                coin_name = utils.get_coin_name_in_text(status.text, ignored_coins, binance_coins)
+                    coin_name = utils.get_coin_name_in_text(status.text, ignored_coins, binance_coins)
 
-                if coin_name:
-                    utils.print_and_write_to_logfile(coin_name + " in Tweet: " + status.text)
-                    market = binance_coins[coin_name][0]
+                    if coin_name:
+                        utils.print_and_write_to_logfile(coin_name + " in Tweet: " + status.text)
+                        market = binance_coins[coin_name][0]
 
-                    bought_price, amount_bought = handle_buying(market)
+                        bought_price, amount_bought = handle_buying(market)
 
-                    if amount_bought > 0:
-                        handle_selling(bought_price, market, amount_bought)
+                        if amount_bought > 0:
+                            handle_selling(bought_price, market, amount_bought)
+        except Exception as e:
+            utils.print_and_write_to_logfile(traceback.format_exc())
 
 
 # Begin Listening for new Tweets
