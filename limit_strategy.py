@@ -14,8 +14,6 @@ waits to sell the coin at a profit.
 
 """
 
-utils.print_and_write_to_logfile('STARTING...')
-
 # Get twitter id's from http://gettwitterid.com
 twitter_user_ids_to_follow = ['759916693']
 twitter, auth = utils.get_twitter_account()
@@ -39,10 +37,10 @@ one_minute_in_milliseconds = 60000
 ##################
 
 # Percent above current sell price to place buy order
-limit_buy_order_percent = 1
+buy_order_overprice_percent = 0
 
-# Cancel buy order if it hasn't sold and the price is this percent more.
-limit_buy_order_cap_percent = 3
+# Cancel buy order if it hasn't sold and the price is this percent more than your order.
+buy_order_cap_percent = 3
 
 ###################
 
@@ -52,20 +50,14 @@ limit_buy_order_cap_percent = 3
 ###################
 
 # Desired percentage profit
-limit_sell_order_desired_percentage_profit = 5
+sell_order_desired_percentage_profit = .01
 
-# Sell if the price drops this far below bought price
-limit_sell_order_percent_too_low = -2
+# Percent below current price to place sell order, must be negative
+sell_order_underprice_percent = -.01
 
-# Percent below current price to place sell order
-limit_sell_order_stop_loss_percent = -1
-
-# Percent dropped below last price after we have reached our goal
+# Percent dropped below last price after we have reached our goal, must be negative
 # making it time to sell
-limit_sell_percent_down_to_sell = -1
-
-# Place a sell order this percent less than the current price
-limit_sell_percent_lower_than_cur_price = -1
+sell_percent_down_to_sell = -1
 
 """
 
@@ -77,43 +69,59 @@ Then waits until the order has been filled.
 
 def handle_buying(market):
     status, bought_price, order_id, amount_bought = binance_utils.limit_buy_from_binance(binance, market,
-                                                                                         limit_buy_order_percent)
+                                                                                         buy_order_overprice_percent)
 
     if amount_bought > 0:
-        utils.print_and_write_to_logfile("WAITING FOR ORDER TO BE FILLED")
+        utils.print_and_write_to_logfile("WAITING FOR BUY ORDER TO BE FILLED")
 
-        cancel_price = bought_price * (1 + limit_buy_order_cap_percent / 100)
+        cancel_price = bought_price * (1 + buy_order_cap_percent / 100)
 
-        if status != 'FILLED':
-            while True:
-                order = binance.get_order(
+        while status != 'FILLED':
+            order = binance.get_order(
+                symbol=market,
+                orderId=order_id)
+
+            status = order['status']
+
+            amount_bought = float(order['executedQty'])
+
+            if status == "FILLED":
+                utils.print_and_write_to_logfile("ORDER FILLED")
+                break
+
+            cur_price = binance_utils.get_most_recent_sell_order_price(binance, market)
+
+            if cur_price > cancel_price:
+                utils.print_and_write_to_logfile("CANCELING ORDER: PRICE WENT UP TOO MUCH BEFORE ORDER WENT THROUGH")
+                result = client.cancel_order(
                     symbol=market,
                     orderId=order_id)
+                print(result)
+                break
 
-                status = order['status']
+            time.sleep(seconds_before_checking_binance)
 
-                amount_bought = float(order['executedQty'])
-
-                if status == "FILLED":
-                    utils.print_and_write_to_logfile("ORDER FILLED")
-                    break
-
-                cur_price = binance_utils.get_most_recent_sell_order_price(binance, market)
-
-                if cur_price > cancel_price:
-                    utils.print_and_write_to_logfile("ORDER CANCELED")
-                    break
-
-                time.sleep(seconds_before_checking_binance)
+    if amount_bought > 0:
+        utils.print_and_write_to_logfile("BUY ORDER HAS BEEN FILLED")
 
     return bought_price, amount_bought
 
 
+def print_trade_data(price_bought, cur_price, max_price, percent_from_max, percent_from_bought):
+    utils.print_and_write_to_logfile("\n" + "************** NEW TRADE **************")
+    utils.print_and_write_to_logfile("PRICE BOUGHT " + str(price_bought))
+    utils.print_and_write_to_logfile("CUR PRICE " + str(cur_price))
+    utils.print_and_write_to_logfile("MAX PRICE " + str(max_price))
+    utils.print_and_write_to_logfile("PERCENT FROM MAX: " + str(percent_from_max))
+    utils.print_and_write_to_logfile("PERCENT FROM BOUGHT PRICE: " + str(percent_from_bought) + "\n")
+
+
 # These variables need to be global so they
 # work in the wait to sell stream
-percentage_change = 0
-reached_goal = False
+
 max_price = 0
+reached_goal = False
+percentage_change = 0
 price_bought = 0
 cur_price = 0
 
@@ -133,11 +141,14 @@ def wait_until_time_to_sell(market):
         percent_from_max = utils.percent_change(max_price, cur_price)
         percent_from_bought = utils.percent_change(price_bought, cur_price)
 
-        if reached_goal == False and percent_from_bought >= limit_sell_order_desired_percentage_profit:
+        # COMMENT THIS LINE OUT IF YOU DON"T WANT TOO MUCH DATA
+        print_trade_data(price_bought, cur_price, max_price, percent_from_max, percent_from_bought)
+
+        if reached_goal == False and percent_from_bought >= sell_order_desired_percentage_profit:
             reached_goal = True
             utils.print_and_write_to_logfile("REACHED PRICE GOAL")
 
-        if percent_from_max < limit_sell_percent_down_to_sell and reached_goal == True:
+        if percent_from_max < sell_percent_down_to_sell and reached_goal == True:
             utils.print_and_write_to_logfile("PERCENT DOWN FROM PEAK: " + str(percent_from_max) + ". TIME TO SELL")
             try:
                 reactor.stop()
@@ -185,7 +196,7 @@ def handle_selling(bought_price, market, amount_bought):
     wait_until_time_to_sell(market)
 
     status, order_id = binance_utils.limit_sell_on_binance(binance, market, amount_bought, cur_price,
-                                                           limit_sell_percent_lower_than_cur_price)
+                                                           sell_percent_lower_than_cur_price)
     amount_sold = 0
     utils.print_and_write_to_logfile("WAITING FOR SELL ORDER TO GO THROUGH")
     while status != 'FILLED':
@@ -200,18 +211,6 @@ def handle_selling(bought_price, market, amount_bought):
 
         percent_change = utils.percent_change(bought_price, cur_price)
 
-        # Coin is going down too much, cancel order and sell lower
-        if percent_change < limit_sell_order_percent_too_low:
-            utils.print_and_write_to_logfile("COIN HAS GONE DOWN BY " + str(percent_change) + ". SELLING AT A LOSS")
-
-            binance.cancel_order(
-                symbol=market,
-                orderId=order_id)
-
-            # Sell at a limit_sell_order_stop_loss_percent lower than the current_price
-            order_placed, order_id = binance_utils.limit_sell_on_binance(binance, market, amount_bought - amount_sold,
-                                                                         cur_price,
-                                                                         limit_sell_order_stop_loss_percent)
         time.sleep(seconds_before_checking_binance)
     utils.print_and_write_to_logfile(market + " SOLD")
 
@@ -232,7 +231,7 @@ class MyStreamListener(tweepy.StreamListener):
                 coin_name = utils.get_coin_name_in_text(status.text, ignored_coins, binance_coins)
 
                 if coin_name:
-                    utils.print_and_write_to_logfile(coin_name + " in tweet: " + status.text)
+                    utils.print_and_write_to_logfile(coin_name + " in Tweet: " + status.text)
                     market = binance_coins[coin_name][0]
 
                     bought_price, amount_bought = handle_buying(market)
@@ -242,6 +241,7 @@ class MyStreamListener(tweepy.StreamListener):
 
 
 # Begin Listening for new Tweets
+utils.print_and_write_to_logfile("AWAITING TWEETS...")
 streamListener = MyStreamListener()
 stream = tweepy.Stream(auth, streamListener)
 stream.filter(follow=twitter_user_ids_to_follow)

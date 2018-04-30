@@ -21,8 +21,9 @@ def get_words_to_look_for():
 
 
 def contains_words_to_look_for(status_text, words_to_look_for):
+    lower_status = status_text.lower()
     for word in words_to_look_for:
-        if word in status_text:
+        if word in lower_status:
             return True
     return False
 

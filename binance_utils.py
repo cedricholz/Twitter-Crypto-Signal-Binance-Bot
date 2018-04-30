@@ -142,7 +142,7 @@ def market_buy_from_binance(binance, market, market_max_buy_percent_from_first_o
                                                                           market_max_buy_percent_from_first_order)
 
     if amount == 0:
-        utils.print_and_write_to_logfile("INSUFFICIENT FUNDS OR BUY ORDER TOO HIGH")
+        utils.print_and_write_to_logfile("INSUFFICIENT FUNDS")
         return False, order_price, amount
 
     order = binance.order_market_buy(
@@ -204,28 +204,34 @@ def limit_buy_from_binance(binance, market, limit_buy_order_percent):
 
     amount, order_price = get_limit_binance_amount_to_buy_and_price(binance, market, total_bitcoin,
                                                                     limit_buy_order_percent)
-    utils.print_and_write_to_logfile("ATTEMPING TO BUY " + str(amount) + " OF " + market + "FOR" + str(amount))
+    utils.print_and_write_to_logfile("ATTEMPTING TO BUY " + str(amount) + " OF " + market + " FOR" + str(total_bitcoin) + " BTC")
     if amount > 0:
         try:
             order = binance.order_limit_buy(
                 symbol=market,
                 quantity=amount,
                 price=order_price)
+
+
         except:
             utils.print_and_write_to_logfile("ERROR MAKING BUY")
             print(order)
             return "", 0, "", 0
 
-        utils.print_and_write_to_logfile("LIMIT BUYING ON BINANCE")
-        utils.print_and_write_to_logfile("MARKET: " + market)
-        utils.print_and_write_to_logfile("AMOUNT: " + str(amount))
-        utils.print_and_write_to_logfile("TOTAL: " + str(total_bitcoin))
+        utils.print_and_write_to_logfile(
+            "LIMIT BOUGHT " + str(amount) + " OF " + market + " FOR " + str(total_bitcoin) + " BTC ON BINANCE")
 
         order_id = order['orderId']
+
+        x = binance.get_order(
+            symbol=market,
+            orderId=order_id)
+
         status = order['status']
 
         return status, float(order_price), order_id, amount
 
+    utils.print_and_write_to_logfile("INSUFFICIENT FUNDS")
     return "", 0, "", 0
 
 
@@ -306,12 +312,15 @@ def limit_sell_on_binance(binance, market, amount_bought, baseline_price, limit_
     symbol = market.split("BTC")[0]
 
     sell_price = baseline_price * (1 + limit_sell_order_desired_percentage_profit / 100)
-    formated_sell_price = f'{sell_price:.6f}'
+    formatted_sell_price = f'{sell_price:.6f}'
 
     order = binance.order_limit_sell(
         symbol=market,
         quantity=amount_bought,
-        price=formated_sell_price)
+        price=formatted_sell_price)
+
+    utils.print_and_write_to_logfile(
+        "LIMIT SELLING " + str(amount_bought) + " OF " + market + " AT " + str(formatted_sell_price))
 
     utils.print_and_write_to_logfile("LIMIT SELL ORDER ON BINANCE")
     utils.print_and_write_to_logfile("MARKET: " + market)
