@@ -4,6 +4,7 @@ import tweepy
 import binance_utils
 from binance.websockets import BinanceSocketManager
 from twisted.internet import reactor
+import traceback
 
 """
 
@@ -92,8 +93,9 @@ def handle_buying(market):
             cur_price = binance_utils.get_most_recent_sell_order_price(binance, market)
 
             if cur_price > cancel_price:
-                utils.print_and_write_to_logfile("CANCELING ORDER: PRICE WENT UP TOO MUCH BEFORE ORDER WENT THROUGH")
-                result = client.cancel_order(
+                utils.print_and_write_to_logfile(
+                    "CANCELING ORDER: PRICE WENT UP TOO MUCH BEFORE ORDER WENT THROUGH. CUR PRICE: " + cur_price)
+                result = binance.cancel_order(
                     symbol=market,
                     orderId=order_id)
                 print(result)
@@ -174,7 +176,7 @@ limit_sell_percent_down_to_sell
 
 percent. Then puts in a sell order for
 
-limit_sell_percent_lower_than_cur_price
+sell_order_underprice_percent
 
 less than the current price.
 
@@ -196,7 +198,7 @@ def handle_selling(bought_price, market, amount_bought):
     wait_until_time_to_sell(market)
 
     status, order_id = binance_utils.limit_sell_on_binance(binance, market, amount_bought, cur_price,
-                                                           sell_percent_lower_than_cur_price)
+                                                           sell_order_underprice_percent)
     amount_sold = 0
     utils.print_and_write_to_logfile("WAITING FOR SELL ORDER TO GO THROUGH")
     while status != 'FILLED':
