@@ -110,10 +110,14 @@ def handle_buying(market):
 
 
 def print_trade_data(price_bought, cur_price, max_price, percent_from_max, percent_from_bought):
+    formatted_cur_price = f'{cur_price:.6f}'
+    formatted_bought_price = f'{price_bought:.6f}'
+    formatted_max_price = f'{max_price:.6f}'
+
     utils.print_and_write_to_logfile("\n" + "************** NEW TRADE **************")
-    utils.print_and_write_to_logfile("PRICE BOUGHT " + str(price_bought))
-    utils.print_and_write_to_logfile("CUR PRICE " + cur_price)
-    utils.print_and_write_to_logfile("MAX PRICE " + str(max_price))
+    utils.print_and_write_to_logfile("PRICE BOUGHT " + str(formatted_bought_price))
+    utils.print_and_write_to_logfile("CUR PRICE " + formatted_cur_price)
+    utils.print_and_write_to_logfile("MAX PRICE " + str(formatted_max_price))
     utils.print_and_write_to_logfile("PERCENT FROM MAX: " + str(percent_from_max))
     utils.print_and_write_to_logfile("PERCENT FROM BOUGHT PRICE: " + str(percent_from_bought) + "\n")
 
@@ -144,7 +148,7 @@ def wait_until_time_to_sell(market):
         percent_from_bought = utils.percent_change(price_bought, cur_price)
 
         # COMMENT THIS LINE OUT IF YOU DON'T WANT TOO MUCH DATA
-        print_trade_data(price_bought, msg['p'], max_price, percent_from_max, percent_from_bought)
+        print_trade_data(price_bought, cur_price, max_price, percent_from_max, percent_from_bought)
 
         if reached_goal == False and percent_from_bought >= sell_order_desired_percentage_profit:
             reached_goal = True
