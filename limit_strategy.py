@@ -230,8 +230,9 @@ class MyStreamListener(tweepy.StreamListener):
             cur_time = int(round(time.time() * 1000))
 
             # Tweets will queue while we are waiting to sell
-            # and we don't want to buy on old data
-            if cur_time - tweet_time < one_minute_in_milliseconds:
+            # and we don't want to buy on old data. Also don't take
+            # tweets that are replies.
+            if cur_time - tweet_time < one_minute_in_milliseconds and not status.in_reply_to_screen_name:
 
                 if utils.contains_words_to_look_for(status.text, words_to_look_for):
 
