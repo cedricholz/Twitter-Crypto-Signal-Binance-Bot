@@ -259,5 +259,5 @@ while True:
         stream = tweepy.Stream(auth, streamListener, timeout=60)
         stream.filter(follow=twitter_user_ids_to_follow)
     except Exception as e:
-        print("Restarting Stream... ")
-        print(e.message)
+        utils.print_and_write_to_logfile("Restarting Stream... ")
+        utils.print_and_write_to_logfile(e.message)
