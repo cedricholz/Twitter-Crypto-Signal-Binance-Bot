@@ -249,6 +249,11 @@ class MyStreamListener(tweepy.StreamListener):
         except Exception as e:
             utils.print_and_write_to_logfile(traceback.format_exc())
 
+    def on_exception(self, exception):
+        print("Exception", exception)
+        print("Restarting Stream...")
+        return
+
 
 # Begin Listening for new Tweets
 utils.print_and_write_to_logfile("AWAITING TWEETS...")
@@ -256,8 +261,8 @@ utils.print_and_write_to_logfile("AWAITING TWEETS...")
 while True:
     try:
         streamListener = MyStreamListener()
-        stream = tweepy.Stream(auth, streamListener, timeout=60)
+        stream = tweepy.Stream(auth, streamListener, timeout=600)
         stream.filter(follow=twitter_user_ids_to_follow)
     except Exception as e:
-        utils.print_and_write_to_logfile("Restarting Stream... ")
+        utils.print_and_write_to_logfile("Restarting Stream...")
         utils.print_and_write_to_logfile(e.message)
